@@ -8,9 +8,8 @@ integer_value = 42
 float_value = 3.14
 byte_value = b'\x00\x01\x02\x03'
 data = struct.pack('if4s', integer_value, float_value, byte_value)
-data_size = len(data)
 
-pdu = PDU(frame_no, ack_no, data_size, data)
+pdu = PDU(frame_no, ack_no, data)
 print(pdu)
 
 

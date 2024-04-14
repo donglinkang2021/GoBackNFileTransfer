@@ -4,12 +4,12 @@ from crc import CRC, CRC_ALGORITHMS
 crc16 = CRC(**CRC_ALGORITHMS["CRC-16/CCITT"])
 
 class PDU:
-    def __init__(self, frame_no:int, ack_no:int, data_size:int,
-                 data:bytes, checksum:int = None):
+    def __init__(self, frame_no:int, ack_no:int, data:bytes, 
+                 data_size:int=None, checksum:int = None):
         self.frame_no = frame_no
         self.ack_no = ack_no
-        self.data_size = data_size
         self.data = data
+        self.data_size = len(data) if data_size is None else data_size
         self.checksum = checksum
 
     def __str__(self):
@@ -33,5 +33,5 @@ class PDU:
         frame_no, ack_no, data_size = struct.unpack('HHH', packed_data[:6])
         data = packed_data[6:-2]
         checksum = struct.unpack('H', packed_data[-2:])[0]
-        return PDU(frame_no, ack_no, data_size, data, checksum)
+        return PDU(frame_no, ack_no, data, data_size, checksum)
 
