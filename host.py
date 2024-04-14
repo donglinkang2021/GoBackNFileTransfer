@@ -9,8 +9,11 @@ print("Host is running")
 addr_set = set()
 target_addr = " "
 
+running = True
+
 def receive_messages():
-    while True:
+    global running
+    while running:
         try:
             sock.settimeout(SK_TIMEOUT)
             data, addr = sock.recvfrom(BUF_SIZE)
@@ -50,7 +53,10 @@ while True:
             for addr in addr_set:
                 sock.sendto(message.encode(), addr)  # 广播
 
+running = False
+recv_thread.join()
 sock.close()
+print("Host is stopped")
 
 """
 if you want to connect 2 host
