@@ -6,3 +6,7 @@ SW_SIZE = 4                 # 发送窗口大小
 MAX_SEQ_NO = 100            # 最大PDU序号
 INIT_SEQ_NO = 1             # 起始PDU的序号
 TIMEOUT = 1000              # 超时定时器值，单位为毫秒
+
+# for socket
+SK_TIMEOUT = 1.0              # socket rece超时时间，单位为秒
+BUF_SIZE = 2048             # 缓冲区大小
