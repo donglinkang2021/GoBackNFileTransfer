@@ -32,6 +32,8 @@ while True:
     if message.lower() == "addr":
         addr = input("<ip:port>: ").strip().split(":")
         addr_set.add((addr[0], int(addr[1])))
+    elif message.lower() == "clear":
+        addr_set.clear()
     elif message.lower() == "exit":
         break
     elif message.lower() == "list" or message.lower() == "ls":
@@ -45,13 +47,15 @@ while True:
         target_addr = input("<ip:port>: ").strip()
     elif message.lower() == "broadcast" or message.lower() == "bro":
         target_addr = " "
+    elif message.lower() == "sendfile" or message.lower() == "sf":
+        pass
     else:
         if target_addr != " ":
             host, port = target_addr.split(":")
             sock.sendto(message.encode(),  (host, int(port)))
         else:
             for addr in addr_set:
-                sock.sendto(message.encode(), addr)  # 广播
+                sock.sendto(message.encode(), addr) 
 
 running = False
 recv_thread.join()
