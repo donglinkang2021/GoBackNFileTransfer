@@ -19,7 +19,6 @@ def help():
     print("  broadcast/bro: Set broadcast mode")
     print("  sendfile/sf: Send a file")
     print("  <message>: Send a message to all addresses")
-    print("  <message> <ip:port>: Send a message to a specific address")
     print("")
 
 init_logger(f"client_{get_time()}.log")
@@ -37,6 +36,15 @@ class UDPClient:
 
         # for receiver
         self.recv_no = INIT_SEQ_NO # receive frame number
+
+    def show_info(self):
+        print(f"Cur Send No: {self.send_no}")
+        print(f"Cur Ack No: {self.ack_no}")
+        print(f"Cur Recv No: {self.recv_no}")
+        print(f"Recorded Address: {self.addr_set}")
+        print(f"sent messages: {self.send_no - INIT_SEQ_NO}")
+        print(f"ack messages: {self.ack_no - INIT_SEQ_NO}")
+        print(f"received messages: {self.recv_no - INIT_SEQ_NO}")
 
     def send_pdu(self, data:bytes, addr:Tuple[str, int]):
         pdu = PDU(self.send_no, self.ack_no, data)
@@ -78,7 +86,7 @@ def receive_messages():
             if pdu.data == b'':
                 print(f"\r{addr}: ACK {pdu.ack_no} received. \n${client.target_addr} ", end="")
                 log_recv(pdu.frame_no, client.recv_no, pdu.data_size, LogStatus.ACK)
-                if pdu.ack_no == client.send_no:
+                if pdu.ack_no == client.send_no - 1:
                     client.ack_no = client._step_no(client.ack_no + 1)
                 continue
             
@@ -111,6 +119,8 @@ while True:
         client.addr_set.add((addr[0], int(addr[1])))
     elif message.lower() == "clear":
         client.addr_set.clear()
+    elif message.lower() == "info":
+        client.show_info()
     elif message.lower() == "exit":
         break
     elif message.lower() == "list" or message.lower() == "ls":
@@ -142,5 +152,9 @@ client.sock.close()
 print("Host is stopped")
 
 """
+bind
+192.168.10.1:42477
+
+addr
 192.168.10.1:42477
 """
