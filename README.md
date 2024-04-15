@@ -4,8 +4,8 @@
 
 - [ ] 调研实现GBN还需要用到哪些库
   - [x] socket
-  - [ ] struct
-  - [ ] thread
+  - [x] struct
+  - [x] thread
 - [ ] 开始学习基础的socket编程
   - [x] 先实现简单的文件传输功能 (实现了本机中windows的简单传输)
   - [x] 实现了向虚拟机中传输文件
@@ -14,5 +14,7 @@
   - [x] 实现了自己的CRC校验
   - [x] 实现了自定义的packet结构
 - [ ] 使用自己定义的基础pdu来用UDP传数据
-  - [x] 学习UDP传输是怎么传的 写了各种简单的UDP传输
-  - [ ] 先传一个简单的packet (在linux和windows之间)
+  - [x] 学习UDP传输是怎么传的 写了各种简单的UDP传输异步收发信息
+  - [x] 现在本地实现文件如何打包成packet
+  - [x] 先传一个简单的packet (在linux和windows之间)
+  - [x] 传packet并获得ack

@@ -12,19 +12,19 @@ class PDU:
         self.data_size = len(data) if data_size is None else data_size
         self.checksum = checksum
 
-    def __str__(self):
-        return f'frame_no: {self.frame_no}, ack_no: {self.ack_no}, data_size: {self.data_size}, checksum: {self.checksum}'
+    def __str__(self) -> str:
+        return f'frame_no: {self.frame_no}, ack_no: {self.ack_no}, data_size: {self.data_size}, checksum: {hex(self.checksum)}'
     
-    def get_packed_data(self):
+    def get_packed_data(self) -> bytes:
         return struct.pack('HHH', self.frame_no, self.ack_no, self.data_size) + self.data
 
-    def pack(self):
+    def pack(self) -> bytes:
         packed_data = self.get_packed_data()
         self.checksum = crc16.calculate(packed_data)
         packed_data += struct.pack('H', self.checksum)
         return packed_data
     
-    def is_corrupted(self):
+    def is_corrupted(self) -> bool:
         packed_data = self.get_packed_data()
         return crc16.calculate(packed_data) != self.checksum
     
