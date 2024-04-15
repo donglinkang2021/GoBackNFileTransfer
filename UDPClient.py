@@ -1,10 +1,11 @@
 import socket
 import threading
 from pdu import PDU
-from config import BUF_SIZE, SK_TIMEOUT, INIT_SEQ_NO, MAX_SEQ_LEN
+from config import BUF_SIZE, SK_TIMEOUT, INIT_SEQ_NO, MAX_SEQ_LEN, RT_TIMEOUT
 from typing import Tuple
 from logger import LogStatus, log_send, log_recv, init_logger
 from utils import get_time
+import time
 
 def help():
     print("UDP Client")
@@ -52,6 +53,11 @@ class UDPClient:
         self.send_no = self._step_no(self.send_no + 1)
         log_send(pdu.frame_no, pdu.ack_no, pdu.data_size, LogStatus.NEW)
 
+    def resend_pdu(self, data:bytes, addr:Tuple[str, int]):
+        pdu = PDU(self.send_no, self.ack_no, data)
+        self.sock.sendto(pdu.pack(), addr)
+        log_send(pdu.frame_no, pdu.ack_no, pdu.data_size, LogStatus.TO)
+
     def _step_no(self, step:int):
         return (step - INIT_SEQ_NO) % MAX_SEQ_LEN + INIT_SEQ_NO
 
@@ -67,6 +73,23 @@ class UDPClient:
         return pdu, addr
     
 client = UDPClient()
+
+def send_messages(message:str):
+    if client.target_addr != " ":
+        host, port = client.target_addr.split(":")
+        client.send_pdu(message.encode(),  (host, int(port)))
+    else:
+        for addr in client.addr_set:
+            client.send_pdu(message.encode(), addr)
+    time.sleep(RT_TIMEOUT)
+    while client.ack_no != client.send_no:
+        if client.target_addr != " ":
+            host, port = client.target_addr.split(":")
+            client.resend_pdu(message.encode(),  (host, int(port)))
+        else:
+            for addr in client.addr_set:
+                client.resend_pdu(message.encode(), addr)
+        time.sleep(RT_TIMEOUT)
 
 def receive_messages():
     while client.running:
@@ -106,6 +129,7 @@ def receive_messages():
         except socket.timeout:
             continue
 
+
 recv_thread = threading.Thread(target=receive_messages)
 recv_thread.daemon = True
 recv_thread.start()
@@ -139,12 +163,10 @@ while True:
     elif message == "":
         continue
     else:
-        if client.target_addr != " ":
-            host, port = client.target_addr.split(":")
-            client.send_pdu(message.encode(),  (host, int(port)))
-        else:
-            for addr in client.addr_set:
-                client.send_pdu(message.encode(), addr)
+        threading.Thread(
+            target=send_messages, 
+            args=(message,)
+        ).start()
 
 client.running = False
 recv_thread.join()

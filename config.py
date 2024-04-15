@@ -7,7 +7,9 @@ MAX_SEQ_NO = 100            # 最大PDU序号
 INIT_SEQ_NO = 1             # 起始PDU的序号
 TIMEOUT = 1000              # 超时定时器值，单位为毫秒
 
+RT_TIMEOUT = TIMEOUT / 1000      # 超时重传的等待时间，单位为秒
+
 # for socket
 MAX_SEQ_LEN = MAX_SEQ_NO - INIT_SEQ_NO + 1
-SK_TIMEOUT = 1.0              # socket rece超时时间，单位为秒
-BUF_SIZE = 2048             # 缓冲区大小
+SK_TIMEOUT = 1.0                 # socket r接收信息超时时间，单位为秒
+BUF_SIZE = 2048                  # 缓冲区大小
