@@ -12,14 +12,13 @@ data = struct.pack('if4s', integer_value, float_value, byte_value)
 pdu = PDU(frame_no, ack_no, data)
 print(pdu)
 
-
 packed_data = pdu.pack()
 
 # Simulate data corruption
 print('---Simulate data corruption---')
 print(packed_data)
 # change one byte at index 5
-packed_data = packed_data[:5] + b'\x01' + packed_data[6:] 
+packed_data = packed_data[:5] + b'\x00' + packed_data[6:] 
 print(packed_data)
 
 unpacked_pdu = PDU.unpack(packed_data)
