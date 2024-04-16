@@ -13,3 +13,6 @@ RT_TIMEOUT = TIMEOUT / 1000      # 超时重传的等待时间，单位为秒
 MAX_SEQ_LEN = MAX_SEQ_NO - INIT_SEQ_NO + 1
 SK_TIMEOUT = 1.0                 # socket r接收信息超时时间，单位为秒
 BUF_SIZE = 2048                  # 缓冲区大小
+
+# for file transfer
+SEP = "<SEP>"                    # 文件名和文件大小的分隔符
