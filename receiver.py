@@ -48,6 +48,7 @@ class UDPReceiver:
         if os.path.exists(self.file_path):
             os.remove(self.file_path)
         self.file_size = file_size
+        self.file_transfer = True
 
     def finish_file_transfer(self):
         self.pbar.set_description(f"File received")
@@ -73,9 +74,8 @@ class UDPReceiver:
         pdu = PDU.unpack(data)
         return pdu, addr
 
-def receive_file_pdu(receiver:UDPReceiver, pdu:PDU):
+def receive_file(receiver:UDPReceiver, pdu:PDU):
     if not receiver.file_transfer:
-        receiver.file_transfer = True
         file_header = pdu.data.decode().split(SEP)
         receiver.init_file_transfer(file_header[0], int(file_header[1]))
     else:
@@ -86,15 +86,24 @@ def receive_file_pdu(receiver:UDPReceiver, pdu:PDU):
         if receiver.file_size == 0:
             receiver.finish_file_transfer()
 
-def receive_msg_pdu(receiver:UDPReceiver, pdu:PDU):
+def receive_msg(receiver:UDPReceiver, pdu:PDU):
+    print(f"\r{receiver.target_addr}: {pdu.data.decode()} \n$ ", end="")
+
+def receive_packet(receiver:UDPReceiver, pdu:PDU):
     if pdu.frame_no == receiver.recv_no:
         if pdu.is_corrupted():
             log_recv(receiver.send_ack_no, receiver.recv_no, 
-                    PacketType.MESSAGE, pdu.data_size, LogStatus.DAE)
+                    pdu.pdu_type, pdu.data_size, LogStatus.DAE)
         else:
-            print(f"\r{receiver.target_addr}: {pdu.data.decode()} \n$ ", end="")
+            if pdu.pdu_type == PacketType.MESSAGE:
+                receive_msg(receiver, pdu)
+            elif pdu.pdu_type == PacketType.FILE:
+                receive_file(receiver, pdu)
+            else:
+                log_recv(receiver.send_ack_no, receiver.recv_no, 
+                        pdu.pdu_type, pdu.data_size, LogStatus.DAE)
             log_recv(receiver.send_ack_no, receiver.recv_no, 
-                    PacketType.MESSAGE, pdu.data_size, LogStatus.OK)
+                    pdu.pdu_type, pdu.data_size, LogStatus.OK)
             receiver.recv_no = receiver.loop_no(receiver.recv_no + 1)
             receiver.send_ack()
             log_send(receiver.send_ack_no, receiver.recv_no,
@@ -103,7 +112,7 @@ def receive_msg_pdu(receiver:UDPReceiver, pdu:PDU):
             
     else:
         log_recv(pdu.frame_no, receiver.send_ack_no, 
-                PacketType.MESSAGE, pdu.data_size, LogStatus.NOE)
+                pdu.pdu_type, pdu.data_size, LogStatus.NOE)
         receiver.send_ack()
         log_send(receiver.send_ack_no, receiver.recv_no,
                 PacketType.ACK, 0, LogStatus.NEW)
@@ -118,14 +127,13 @@ def receive(receiver:UDPReceiver):
                 print(f"\rTarget address added: {addr} \n$ ", end="")
                 receiver.target_addr = addr
                 receiver.target_addrs.add(addr)
-            if pdu.pdu_type == PacketType.MESSAGE:
-                receive_msg_pdu(receiver, pdu)
+            if pdu.pdu_type == PacketType.MESSAGE or pdu.pdu_type == PacketType.FILE:
+                receive_packet(receiver, pdu)
             elif pdu.pdu_type == PacketType.ACK:
                 if pdu.ack_no == receiver.send_no:
-                    log_recv(pdu.frame_no, pdu.ack_no, PacketType.ACK, 0, LogStatus.OK)
+                    log_recv(pdu.frame_no, pdu.ack_no, 
+                             PacketType.ACK, 0, LogStatus.OK)
                     receiver.recv_ack_no = receiver.loop_no(receiver.recv_ack_no + 1)
-            elif pdu.pdu_type == PacketType.FILE:
-                receive_file_pdu(receiver, pdu)
             else:
                 print("\rUnknown PDU type. \n$ ", end="")
         except socket.timeout:
@@ -173,3 +181,9 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+"""
+Receiving file: miziha_running.png (3324832 bytes) ...
+File received: 100%|██████████████████████████████████| 3.32M/3.32M [06:48<00:00, 8.14kB/s]
+<file_path>: received/miziha_running.png 
+"""

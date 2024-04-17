@@ -24,6 +24,10 @@ class UDPSender:
         self.running = True
         self.timeout_retransmit = False
 
+        self.send_window = []  # list of send_no of PDUs to send
+        self.window_left = 0
+        self.window_right = 0
+
     def info(self):
         print(f"send_no: {self.send_no}")
         print(f"recv_ack_no: {self.recv_ack_no}")
@@ -79,7 +83,7 @@ def receive(sender:UDPSender):
             elif pdu.pdu_type == PacketType.ACK:
                 if pdu.ack_no == sender.send_no:
                     log_recv(pdu.frame_no, pdu.ack_no, PacketType.ACK, 0, LogStatus.OK)
-                    sender.recv_ack_no = sender.loop_no(sender.recv_ack_no + 1)
+                    sender.recv_ack_no = pdu.ack_no
             elif pdu.pdu_type == PacketType.FILE:
                 pass
             else:
@@ -106,17 +110,62 @@ def send_file(sender:UDPSender, file_path:str):
     # send file name and size first
     file_name = os.path.basename(file_path)
     file_size = os.path.getsize(file_path)
-    sender.send_pdu(PacketType.FILE, f"{file_name}{SEP}{file_size}".encode())
+    header = f"{file_name}{SEP}{file_size}".encode()
+    sender.send_pdu(PacketType.FILE, header)
+    log_send(sender.send_no, sender.recv_ack_no,
+            PacketType.FILE, len(header), LogStatus.NEW)
+    sender.send_no = sender.loop_no(sender.send_no + 1)
     
     print(f"\rSending {file_name} ({file_size} bytes) ...")
     pbar = tqdm(total=file_size, unit="B", unit_scale=True)
     with open(file_path, "rb") as file:
-        data = file.read(DATA_SIZE)
-        pbar.update(len(data))
-        while data:
-            sender.send_pdu(PacketType.FILE, data)
-            data = file.read(DATA_SIZE)
-            pbar.update(len(data))
+        data = file.read()
+
+    num_frames = (len(data) + DATA_SIZE - 1) // DATA_SIZE
+    while sender.window_left < num_frames:
+        # send frames within the window
+        while sender.window_right < min(sender.window_left + SW_SIZE, num_frames):
+            start = sender.window_right * DATA_SIZE
+            end = min(start + DATA_SIZE, len(data))
+            sender.send_pdu(PacketType.FILE, data[start:end])
+            if sender.send_no in sender.send_window:
+                log_send(sender.send_no, sender.recv_ack_no,
+                         PacketType.FILE, end - start, LogStatus.TO)
+            else:
+                log_send(sender.send_no, sender.recv_ack_no,
+                     PacketType.FILE, end - start, LogStatus.NEW)
+                sender.send_window.append(sender.send_no)
+            sender.send_no = sender.loop_no(sender.send_no + 1)
+            sender.window_right += 1
+
+        # wait for ACKs
+        if sender.send_no != sender.recv_ack_no:
+            time.sleep(RT_TIMEOUT)
+
+        if sender.send_no == sender.recv_ack_no:
+            sender.window_left = sender.window_right
+            pbar.update(len(sender.send_window) * DATA_SIZE)
+            sender.send_window.clear()
+        elif sender.recv_ack_no in sender.send_window:
+            num_frame_sent = sender.send_window.index(sender.recv_ack_no)
+            sender.window_left += num_frame_sent
+            sender.window_right = sender.window_left
+            sender.send_window = sender.send_window[num_frame_sent:]
+            sender.send_no = sender.loop_no(sender.send_no - num_frame_sent)
+            pbar.update(num_frame_sent * DATA_SIZE)
+        else: # Go Back N
+            sender.send_no = sender.loop_no(sender.send_no - len(sender.send_window))
+            sender.window_right = sender.window_left
+            sender.send_window.clear()
+            while sender.window_right < min(sender.window_left + SW_SIZE, num_frames):
+                start = sender.window_right * DATA_SIZE
+                end = min(start + DATA_SIZE, len(data))
+                sender.send_pdu(PacketType.FILE, data[start:end])
+                log_send(sender.send_no, sender.recv_ack_no,
+                         PacketType.FILE, end - start, LogStatus.RT)
+                sender.send_no = sender.loop_no(sender.send_no + 1)
+                sender.window_right += 1
+            
     pbar.set_description("File sent")
     pbar.close()
     print("\r$ ", end="")
@@ -156,3 +205,10 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+"""
+<file_path>: file_examples\miziha_running.png        
+Sending miziha_running.png (3324832 bytes) ... 
+File sent: : 3.32MB [06:49, 8.12kB/s]
+"""
