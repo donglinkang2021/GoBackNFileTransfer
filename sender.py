@@ -3,7 +3,7 @@ import threading
 import os
 from typing import Tuple
 from pdu import PDU, PacketType
-from config import BUF_SIZE, SK_TIMEOUT, INIT_SEQ_NO, MAX_SEQ_LEN, RT_TIMEOUT, DATA_SIZE, SW_SIZE, SEP
+from config import BUF_SIZE, SK_TIMEOUT, INIT_SEQ_NO, MAX_SEQ_LEN, RT_TIMEOUT, DATA_SIZE, SW_SIZE, SEP, UDP_PORT
 from tqdm import tqdm
 from logger import LogStatus, init_logger, log_send, log_recv
 import time
@@ -172,7 +172,7 @@ def send_file(sender:UDPSender, file_path:str):
 
 def main():
     init_logger("sender.log")
-    sender = UDPSender(('192.168.10.129', 42477))
+    sender = UDPSender(('192.168.10.129', UDP_PORT))
     print(f"Receiver address: {sender.receiver_addr} ")
     recv_thread = threading.Thread(target=receive, args=(sender,))
     recv_thread.daemon = True 
@@ -208,7 +208,18 @@ if __name__ == "__main__":
 
 
 """
+SWS 6:
 <file_path>: file_examples\miziha_running.png        
 Sending miziha_running.png (3324832 bytes) ... 
 File sent: : 3.32MB [06:49, 8.12kB/s]
+
+SWS 50:
+<file_path>: file_examples\miziha_running.png
+Sending miziha_running.png (3324832 bytes) ...
+File sent: : 3.32MB [01:08, 48.8kB/s]
+
+SWS 99:
+<file_path>: file_examples\miziha_running.png
+Sending miziha_running.png (3324832 bytes) ...
+File sent: : 3.32MB [00:36, 92.1kB/s]
 """

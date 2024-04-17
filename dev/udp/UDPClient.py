@@ -174,9 +174,11 @@ client.sock.close()
 print("Host is stopped")
 
 """
+for receiver
 bind
 192.168.10.1:42477
 
+for sender
 addr
 192.168.10.1:42477
 """

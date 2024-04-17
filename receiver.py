@@ -3,7 +3,7 @@ import threading
 import os
 from typing import Tuple
 from pdu import PDU, PacketType
-from config import BUF_SIZE, SK_TIMEOUT, INIT_SEQ_NO, MAX_SEQ_LEN, RT_TIMEOUT, DATA_SIZE, SW_SIZE, SEP
+from config import BUF_SIZE, SK_TIMEOUT, INIT_SEQ_NO, MAX_SEQ_LEN, RT_TIMEOUT, DATA_SIZE, SW_SIZE, SEP, UDP_PORT
 from tqdm import tqdm
 from logger import LogStatus, init_logger, log_send, log_recv
 import time
@@ -155,7 +155,7 @@ def send_message(receiver:UDPReceiver, message:str):
 
 def main():
     init_logger("receiver.log")
-    receiver = UDPReceiver(('192.168.10.129', 42477))
+    receiver = UDPReceiver(('192.168.10.129', UDP_PORT))
     recv_thread = threading.Thread(target=receive, args=(receiver,))
     recv_thread.daemon = True
     recv_thread.start()
@@ -183,7 +183,18 @@ if __name__ == "__main__":
     main()
 
 """
+SWS 6:
 Receiving file: miziha_running.png (3324832 bytes) ...
 File received: 100%|██████████████████████████████████| 3.32M/3.32M [06:48<00:00, 8.14kB/s]
+<file_path>: received/miziha_running.png 
+
+SWS 50:
+Receiving file: miziha_running.png (3324832 bytes) ...
+File received: 100%|██████████████████████████████████| 3.32M/3.32M [01:07<00:00, 49.4kB/s]
+<file_path>: received/miziha_running.png 
+
+SWS 99:
+Receiving file: miziha_running.png (3324832 bytes) ...
+File received: 100%|██████████████████████████████████| 3.32M/3.32M [00:35<00:00, 94.4kB/s]
 <file_path>: received/miziha_running.png 
 """

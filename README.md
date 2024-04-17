@@ -30,9 +30,12 @@
     - [x] 测试重传
   - [x] 优化命名
 - [x] 改一下logging的顺序 感觉这边的逻辑还是有点问题
-- [ ] 实现滑动窗口传输文件
-  - [ ] 在一个packet的基础上操作就是多个packet的操作
-  - [ ] 错误生成是在发送端 发送多个packet的时候，随机生成错误
+- [x] 实现滑动窗口传输文件
+  - [x] 在一个packet的基础上操作就是多个packet的操作
+  - [x] 测试不同窗口大小对传输速度的影响 看看有没有其它bug
+  - [ ] 错误生成是在发送端 发送多个packet的时候，随机生成PDU错误或者PDU丢失
+  - [ ] 测试错误生成
+  - [ ] 读取日志文件，对通信状态记录数据进行统计分析
 - [ ] 将两个类合并为一个类
   - [ ] 第一件要做的事情就是命名一致
 
@@ -114,7 +117,7 @@ send_no += 1
 recv_no = 1
 send_ack_no = 1
 pdu = recv_pdu()
-if pdu.recv_ack_no == recv_no:
+if recv_no == pdu.frame_no:
   recv_no += 1
   ack = PDU(frame_no = send_ack_no, ack_no = recv_no)
   send_ack(ack)
@@ -128,6 +131,10 @@ recv_ack_no = 1
 ack = recv_pdu()
 if send_no == ack.ack_no:
   recv_ack_no += 1
+
+# Finally
+send_no = 2
+recv_ack_no = 2
+recv_no = 2
+send_ack_no = 2
 ```
-
-
