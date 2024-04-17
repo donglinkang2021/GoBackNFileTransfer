@@ -67,7 +67,6 @@ class UDPReceiver:
     def send_ack(self):
         pdu = PDU(self.send_ack_no, self.recv_no, b"", PacketType.ACK)
         self.sock.sendto(pdu.pack(), self.target_addr) 
-        self.send_ack_no = self.loop_no(self.send_ack_no + 1)
 
     def recv_pdu(self):
         data, addr = self.sock.recvfrom(BUF_SIZE)
@@ -88,7 +87,7 @@ def receive_file_pdu(receiver:UDPReceiver, pdu:PDU):
             receiver.finish_file_transfer()
 
 def receive_msg_pdu(receiver:UDPReceiver, pdu:PDU):
-    if pdu.ack_no == receiver.recv_no:
+    if pdu.frame_no == receiver.recv_no:
         if pdu.is_corrupted():
             log_recv(receiver.send_ack_no, receiver.recv_no, 
                     PacketType.MESSAGE, pdu.data_size, LogStatus.DAE)
@@ -100,13 +99,15 @@ def receive_msg_pdu(receiver:UDPReceiver, pdu:PDU):
             receiver.send_ack()
             log_send(receiver.send_ack_no, receiver.recv_no,
                     PacketType.ACK, 0, LogStatus.NEW)
+            receiver.send_ack_no = receiver.loop_no(receiver.send_ack_no + 1)
             
     else:
         log_recv(pdu.frame_no, receiver.send_ack_no, 
-                    PacketType.MESSAGE, pdu.data_size, LogStatus.NOE)
+                PacketType.MESSAGE, pdu.data_size, LogStatus.NOE)
         receiver.send_ack()
         log_send(receiver.send_ack_no, receiver.recv_no,
-                    PacketType.ACK, 0, LogStatus.NEW)
+                PacketType.ACK, 0, LogStatus.NEW)
+        receiver.send_ack_no = receiver.loop_no(receiver.send_ack_no + 1)
 
 def receive(receiver:UDPReceiver):
     while receiver.running:
@@ -132,12 +133,16 @@ def receive(receiver:UDPReceiver):
 
 def send_message(receiver:UDPReceiver, message:str):
     receiver.send_pdu(PacketType.MESSAGE, message.encode())
+    log_send(receiver.send_no, receiver.recv_ack_no, 
+             PacketType.MESSAGE, len(message), LogStatus.NEW)
     receiver.send_no = receiver.loop_no(receiver.send_no + 1)
-    log_send(receiver.send_no, receiver.recv_ack_no, PacketType.MESSAGE, len(message), LogStatus.NEW)
     time.sleep(RT_TIMEOUT)
     while receiver.send_no != receiver.recv_ack_no:
+        receiver.send_no = receiver.loop_no(receiver.send_no - 1)
         receiver.send_pdu(PacketType.MESSAGE, message.encode())
-        log_send(receiver.send_no, receiver.recv_ack_no, PacketType.MESSAGE, len(message), LogStatus.TO)
+        log_send(receiver.send_no, receiver.recv_ack_no, 
+                 PacketType.MESSAGE, len(message), LogStatus.TO)
+        receiver.send_no = receiver.loop_no(receiver.send_no + 1)
         time.sleep(RT_TIMEOUT)
 
 def main():

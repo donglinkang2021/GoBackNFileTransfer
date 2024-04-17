@@ -40,7 +40,6 @@ class UDPSender:
     def send_ack(self):
         pdu = PDU(self.send_ack_no, self.recv_no, b"", PacketType.ACK)
         self.sock.sendto(pdu.pack(), self.receiver_addr) 
-        self.send_ack_no = self.loop_no(self.send_ack_no + 1)
 
     def recv_pdu(self):
         data, addr = self.sock.recvfrom(BUF_SIZE)
@@ -60,13 +59,15 @@ def receive_msg_pdu(sender:UDPSender, pdu:PDU):
             sender.send_ack()
             log_send(sender.send_ack_no, sender.recv_no,
                     PacketType.ACK, 0, LogStatus.NEW)
+            sender.send_ack_no = sender.loop_no(sender.send_ack_no + 1)
             
     else:
         log_recv(pdu.frame_no, sender.send_ack_no, 
-                    PacketType.MESSAGE, pdu.data_size, LogStatus.NOE)
+                PacketType.MESSAGE, pdu.data_size, LogStatus.NOE)
         sender.send_ack()
         log_send(sender.send_ack_no, sender.recv_no,
-                    PacketType.ACK, 0, LogStatus.NEW)
+                PacketType.ACK, 0, LogStatus.NEW)
+        sender.send_ack_no = sender.loop_no(sender.send_ack_no + 1)
 
 def receive(sender:UDPSender):
     while sender.running:
@@ -88,12 +89,16 @@ def receive(sender:UDPSender):
 
 def send_message(sender:UDPSender, message:str):
     sender.send_pdu(PacketType.MESSAGE, message.encode())
+    log_send(sender.send_no, sender.recv_ack_no, 
+             PacketType.MESSAGE, len(message), LogStatus.NEW)
     sender.send_no = sender.loop_no(sender.send_no + 1)
-    log_send(sender.send_no, sender.recv_ack_no, PacketType.MESSAGE, len(message), LogStatus.NEW)
     time.sleep(RT_TIMEOUT)
     while sender.send_no != sender.recv_ack_no:
+        sender.send_no = sender.loop_no(sender.send_no - 1)
         sender.send_pdu(PacketType.MESSAGE, message.encode())
-        log_send(sender.send_no, sender.recv_ack_no, PacketType.MESSAGE, len(message), LogStatus.TO)
+        log_send(sender.send_no, sender.recv_ack_no, 
+                 PacketType.MESSAGE, len(message), LogStatus.TO)
+        sender.send_no = sender.loop_no(sender.send_no + 1)
         time.sleep(RT_TIMEOUT)
 
 
