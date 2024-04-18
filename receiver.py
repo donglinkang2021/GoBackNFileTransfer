@@ -211,4 +211,10 @@ pdu err 10%:
 Receiving file: miziha_running.png (3324832 bytes) ...
 File received: 100%|████████████████████████████████████████████████████████████████████████████████████| 3.32M/3.32M [07:29<00:00, 7.40kB/s]
 <file_path>: received/miziha_running.png 
+
+pdu lost 10% and err 10%:
+Target address added: ('192.168.10.1', 52109) 
+Receiving file: 1_chpt1_Introduction-2024.pdf (4914113 bytes) ...
+File received: 100%|████████████████████████████████████████████████████████████████████████████████████| 4.91M/4.91M [21:08<00:00, 3.87kB/s]
+<file_path>: received/1_chpt1_Introduction-2024.pdf 
 """
