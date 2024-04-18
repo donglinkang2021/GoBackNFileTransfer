@@ -45,10 +45,10 @@ class UDPSender:
         ack_no = self.recv_ack_no if ack_no is None else ack_no
         pdu = PDU(frame_no, ack_no, data, pdu_type)
         packed_data = pdu.pack()
-        # if random.random() < ERROR_RATE / 100:
-            # packed_data = packed_data[:5] + ERROR_DATA + packed_data[6:]
-        if random.random() >= LOST_RATE / 100:
-            self.sock.sendto(packed_data, self.receiver_addr)
+        if random.random() < ERROR_RATE / 100:
+            packed_data = packed_data[:5] + ERROR_DATA + packed_data[6:]
+        # if random.random() >= LOST_RATE / 100:
+        self.sock.sendto(packed_data, self.receiver_addr)
 
     def send_ack(self):
         pdu = PDU(self.send_ack_no, self.recv_no, b"", PacketType.ACK)
@@ -257,10 +257,15 @@ Sending miziha_running.png (3324832 bytes) ...
 File sent: : 3.32MB [00:36, 92.1kB/s]
 
 
-ERR pdu lost 10%:
+pdu lost 10%:
 $ sf
 <file_path>: file_examples\miziha_running.png
 File sent: : 3.32MB [07:28, 7.42kB/s]
+
+pdu err 10%:
+$ sf
+<file_path>: file_examples\miziha_running.png
+File sent: : 3.32MB [07:29, 7.40kB/s]
 """
 
 """
