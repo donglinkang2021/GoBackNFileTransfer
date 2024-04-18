@@ -4,7 +4,7 @@ log_file = 'sender.log'
 df_log = get_dataframe_log(log_file)
 df_log.head()
 
-figsize = (20, 5)
+figsize = (40, 10)
 save_dir = 'plots'
 attributes = ['status', 'action', 'pdu_type']
 show_values = ['data_size', 'frame_no']

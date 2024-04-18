@@ -3,9 +3,9 @@ import threading
 import os
 from typing import Tuple
 from pdu import PDU, PacketType
-from config import BUF_SIZE, SK_TIMEOUT, INIT_SEQ_NO, MAX_SEQ_LEN, RT_TIMEOUT, DATA_SIZE, SW_SIZE, SEP, UDP_PORT
+from config import *
+from logger import *
 from tqdm import tqdm
-from logger import LogStatus, init_logger, log_send, log_recv
 import time
 
 class UDPReceiver:
@@ -200,5 +200,10 @@ File received: 100%|████████████████████
 SWS 99:
 Receiving file: miziha_running.png (3324832 bytes) ...
 File received: 100%|██████████████████████████████████| 3.32M/3.32M [00:35<00:00, 94.4kB/s]
+<file_path>: received/miziha_running.png 
+
+ERR pdu lost 10%:
+Receiving file: miziha_running.png (3324832 bytes) ...
+File received: 100%|████████████████████████████████████████████████████████████████████████████████████████████████████████| 3.32M/3.32M [07:28<00:00, 7.42kB/s]
 <file_path>: received/miziha_running.png 
 """

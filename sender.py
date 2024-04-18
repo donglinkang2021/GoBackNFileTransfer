@@ -48,7 +48,6 @@ class UDPSender:
         # if random.random() < ERROR_RATE / 100:
             # packed_data = packed_data[:5] + ERROR_DATA + packed_data[6:]
         if random.random() >= LOST_RATE / 100:
-        # if random.random() >= 0.8:
             self.sock.sendto(packed_data, self.receiver_addr)
 
     def send_ack(self):
@@ -95,10 +94,10 @@ def receive(sender:UDPSender):
                     log_recv(pdu.frame_no, pdu.ack_no, PacketType.ACK, 0, LogStatus.OK)
                     sender.recv_ack_no = pdu.ack_no
                 elif pdu.ack_no < sender.send_no:
-                    log_recv(pdu.frame_no, pdu.ack_no, PacketType.ACK, 0, LogStatus.RT)
+                    log_recv(pdu.frame_no, pdu.ack_no, PacketType.ACK, 0, LogStatus.OK)
                     sender.recv_ack_no = max(sender.recv_ack_no, pdu.ack_no)
                 else:
-                    log_recv(pdu.frame_no, pdu.ack_no, PacketType.ACK, 0, LogStatus.OK)
+                    log_recv(pdu.frame_no, pdu.ack_no, PacketType.ACK, 0, LogStatus.DAE)
             elif pdu.pdu_type == PacketType.FILE:
                 pass
             else:
@@ -123,7 +122,6 @@ def send_message(sender:UDPSender, message:str):
 
 def send_file(sender:UDPSender, file_path:str):
     # send file name and size first
-    print("\r Sending file info ...")
     file_name = os.path.basename(file_path)
     file_size = os.path.getsize(file_path)
     header = f"{file_name}{SEP}{file_size}".encode()
@@ -140,18 +138,14 @@ def send_file(sender:UDPSender, file_path:str):
         sender.send_no = sender.loop_no(sender.send_no + 1)
         time.sleep(RT_TIMEOUT)
     
-    print(f"\rSending {file_name} ({file_size} bytes) ...")
     pbar = tqdm(total=file_size, unit="B", unit_scale=True)
     with open(file_path, "rb") as file:
         data = file.read()
 
-    print("\r Sending file data ...")
     n_data = len(data)
     num_frames = (n_data + DATA_SIZE - 1) // DATA_SIZE
     while sender.window_left < num_frames:
-        print(f"\r {'-' * 10} send frames within the window {'-' * 10}")
         while sender.window_right < min(sender.window_left + SW_SIZE, num_frames):
-            print(f"\r Sending packet from {sender.window_left} {sender.window_right}...")
             start = sender.window_right * DATA_SIZE
             end = min(start + DATA_SIZE, n_data)
             rel_step = sender.window_right - sender.window_left
@@ -170,32 +164,21 @@ def send_file(sender:UDPSender, file_path:str):
                 sender.send_window.append(sender.send_no)
                 sender.send_no = sender.loop_no(sender.send_no + 1)
             sender.window_right += 1
-            print(f"\r now sender.send_window: {sender.send_window}")
-            print(f"\r now sender.send_no: {sender.send_no}")
 
-        print(f"\r {'-' * 10} wait for ACKs {'-' * 10}")
         time.sleep(RT_TIMEOUT)
-        print(f"\r Waiting for ACKs, Now ack {sender.recv_ack_no}...")
 
-        print(f"\r {'-' * 10} postprocess {'-' * 10}")
         if sender.send_no == sender.recv_ack_no:
-            print(f"\r All ACKs received... ACK {sender.recv_ack_no}")
             sender.window_left = sender.window_right
             pbar.update(len(sender.send_window) * DATA_SIZE)
             sender.send_window.clear()
         elif sender.recv_ack_no in sender.send_window:
-            print(f"\r Partly ACK {sender.recv_ack_no} received...")
-            print(f"\r sender.send_window: {sender.send_window}")
             num_frame_sent = sender.send_window.index(sender.recv_ack_no)
             sender.window_left += num_frame_sent
             sender.window_right = sender.window_left
             sender.send_window = sender.send_window[num_frame_sent:]
             # sender.send_no = sender.loop_no(sender.send_no - num_frame_sent)
-            print(f"\r now sender.send_window: {sender.send_window}")
-            print(f"\r now sender.send_no: {sender.send_no}")
             pbar.update(num_frame_sent * DATA_SIZE)
         else: # Go Back N
-            print(f"\r Go Back N...")
             sender.send_no = sender.loop_no(sender.send_no - len(sender.send_window))
             sender.window_right = sender.window_left
             sender.send_window.clear()
@@ -274,9 +257,10 @@ Sending miziha_running.png (3324832 bytes) ...
 File sent: : 3.32MB [00:36, 92.1kB/s]
 
 
-ERR test
-sf
-random.txt
+ERR pdu lost 10%:
+$ sf
+<file_path>: file_examples\miziha_running.png
+File sent: : 3.32MB [07:28, 7.42kB/s]
 """
 
 """
