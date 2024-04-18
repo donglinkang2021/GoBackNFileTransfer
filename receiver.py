@@ -109,14 +109,16 @@ def receive_packet(receiver:UDPReceiver, pdu:PDU):
             log_send(receiver.send_ack_no, receiver.recv_no,
                     PacketType.ACK, 0, LogStatus.NEW)
             receiver.send_ack_no = receiver.loop_no(receiver.send_ack_no + 1)
-            
-    else:
-        log_recv(pdu.frame_no, receiver.send_ack_no, 
-                pdu.pdu_type, pdu.data_size, LogStatus.NOE)
+    elif pdu.frame_no < receiver.recv_no:
         receiver.send_ack()
         log_send(receiver.send_ack_no, receiver.recv_no,
                 PacketType.ACK, 0, LogStatus.NEW)
-        receiver.send_ack_no = receiver.loop_no(receiver.send_ack_no + 1)
+    else:
+        receiver.send_ack()
+        log_send(receiver.send_ack_no, receiver.recv_no,
+                PacketType.ACK, 0, LogStatus.NEW)
+        log_recv(pdu.frame_no, pdu.ack_no, 
+                pdu.pdu_type, pdu.data_size, LogStatus.NOE)
 
 def receive(receiver:UDPReceiver):
     while receiver.running:
@@ -127,6 +129,10 @@ def receive(receiver:UDPReceiver):
                 print(f"\rTarget address added: {addr} \n$ ", end="")
                 receiver.target_addr = addr
                 receiver.target_addrs.add(addr)
+            if pdu == None:
+                log_recv(receiver.send_ack_no, receiver.recv_no, 
+                    PacketType.UNKNOWN, 0, LogStatus.DAE)
+                continue
             if pdu.pdu_type == PacketType.MESSAGE or pdu.pdu_type == PacketType.FILE:
                 receive_packet(receiver, pdu)
             elif pdu.pdu_type == PacketType.ACK:
@@ -134,8 +140,6 @@ def receive(receiver:UDPReceiver):
                     log_recv(pdu.frame_no, pdu.ack_no, 
                              PacketType.ACK, 0, LogStatus.OK)
                     receiver.recv_ack_no = receiver.loop_no(receiver.recv_ack_no + 1)
-            else:
-                print("\rUnknown PDU type. \n$ ", end="")
         except socket.timeout:
             continue
 

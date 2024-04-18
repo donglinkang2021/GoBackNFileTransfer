@@ -8,6 +8,7 @@ class PacketType(Enum):
     MESSAGE = 0
     FILE = 1
     ACK = 2
+    UNKNOWN = 3
 
     def __str__(self) -> str:
         return self.name
