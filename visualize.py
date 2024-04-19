@@ -94,7 +94,7 @@ def get_title(attribute:str, show_value:str):
         title += ' PDU Type'
     return title
 
-def plot_log(df_log:pd.DataFrame, attribute:str='status', show_value:str='data_size', save_dir:str=None, width=10, height=5):
+def plot_log(df_log:pd.DataFrame, attribute:str='status', show_value:str='data_size', save_dir:str=None, is_save:bool=True, width=10, height=5):
     assert attribute in ['status', 'action', 'pdu_type'], 'attribute must be one of status, action, pdu_type'
     assert show_value in ['data_size', 'frame_no'], 'show_value must be one of data_size, frame_no'
     plt.figure(figsize = (width, height))
@@ -118,7 +118,8 @@ def plot_log(df_log:pd.DataFrame, attribute:str='status', show_value:str='data_s
         save_path = f"{save_dir}/{attribute}_{show_value}.png" 
     else: 
         save_path = f"{attribute}_{show_value}.png"
-    plt.savefig(save_path)
+    if is_save:
+        plt.savefig(save_path)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Visualize the log file')

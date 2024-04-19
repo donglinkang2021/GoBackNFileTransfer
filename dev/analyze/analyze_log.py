@@ -10,7 +10,7 @@ attributes = ['status', 'action', 'pdu_type']
 show_values = ['data_size', 'frame_no']
 for show_value in show_values:
     for attribute in attributes:
-        plot_log(df_log, attribute, show_value, save_dir, figsize[0], figsize[1])
+        plot_log(df_log, attribute, show_value, save_dir, True, figsize[0], figsize[1])
 
 
 # generate a report.md file here

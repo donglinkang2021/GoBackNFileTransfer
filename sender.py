@@ -45,11 +45,10 @@ class UDPSender:
         ack_no = self.recv_ack_no if ack_no is None else ack_no
         pdu = PDU(frame_no, ack_no, data, pdu_type)
         packed_data = pdu.pack()
-        # if random.random() < ERROR_RATE / 100:
-        #     packed_data = packed_data[:5] + ERROR_DATA + packed_data[6:]
+        if random.random() < ERROR_RATE / 100:
+            packed_data = packed_data[:5] + ERROR_DATA + packed_data[6:]
         if random.random() >= LOST_RATE / 100:
             self.sock.sendto(packed_data, self.receiver_addr)
-        # self.sock.sendto(packed_data, self.receiver_addr)
 
     def send_ack(self):
         pdu = PDU(self.send_ack_no, self.recv_no, b"", PacketType.ACK)
@@ -95,7 +94,7 @@ def receive(sender:UDPSender):
                     log_recv(pdu.frame_no, pdu.ack_no, PacketType.ACK, 0, LogStatus.OK)
                     sender.recv_ack_no = pdu.ack_no
                 elif pdu.ack_no < sender.send_no:
-                    log_recv(pdu.frame_no, pdu.ack_no, PacketType.ACK, 0, LogStatus.OK)
+                    log_recv(pdu.frame_no, pdu.ack_no, PacketType.ACK, 0, LogStatus.RT)
                     sender.recv_ack_no = max(sender.recv_ack_no, pdu.ack_no)
                 else:
                     log_recv(pdu.frame_no, pdu.ack_no, PacketType.ACK, 0, LogStatus.DAE)
@@ -148,7 +147,7 @@ def send_file_gbn(sender:UDPSender, file_path:str):
                     sender.send_window[rel_step]
                 )
                 log_send(sender.send_window[rel_step], sender.recv_ack_no,
-                         PacketType.FILE, end - start, LogStatus.RT)
+                         PacketType.FILE, end - start, LogStatus.TO)
             else:
                 sender.send_pdu(PacketType.FILE, data[start:end])
                 log_send(sender.send_no, sender.recv_ack_no,
@@ -275,10 +274,9 @@ pdu lost 10% and err 10%:
 $ sf
 <file_path>: file_examples\1_chpt1_Introduction-2024.pdf
 File sent: : 4.91MB [21:08, 3.87kB/s]
-"""
 
-"""
-analyze:
-
-python analyze\analyze_log.py
+pdu lost 10% and err 10%:
+$ sf
+<file_path>: file_examples\miziha_running.png
+File sent: : 3.32MB [03:49, 14.5kB/s]
 """
