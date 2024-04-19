@@ -36,7 +36,9 @@
   - [x] 错误生成是在发送端 发送多个packet的时候，随机生成PDU错误或者PDU丢失
   - [x] 测试错误生成
   - [x] 读取日志文件，对通信状态记录数据进行统计分析
-  - [ ] 看一下可不可以优化一下速度 减少超时重传的次数
+  - [x] 看一下可不可以优化一下速度 减少超时重传的次数
+    - [x] 优化Go Back N 的实现
+    - [x] 思考超时重传和重传的关系
   - [ ] 下一步可以做的事情是统计数据
     - [ ] 文件划分的 PDU 总数量
     - [ ] 通信总次数
@@ -78,7 +80,7 @@ PDU。
 - pdu_to_send: 发送的帧的序号
 - acked_no: 发送文件端希望接收文件端确认的帧号 (该帧号-1则是已被确认的帧号，累计确认)
 - data_size: 数据的大小
-- status: 当前帧的状态，有New, Timeout, ReTransmit, ACK
+- status: 当前帧的状态，有New, Timeout, ReTransmit
   - New 表示新发送的帧
   - Timeout 表示超时重传
   - ReTransmit 表示重传
@@ -92,11 +94,10 @@ PDU。
 - pdu_recv: 发送的帧的序号
 - pdu_exp: 接受文件端希望发送文件端发送的帧号
 - data_size: 数据的大小
-- status: 当前帧的状态，有DataErr, NoErr, OK, ACK
+- status: 当前帧的状态，有DataErr, NoErr, OK
   - DataErr 表示数据出错
   - NoErr 表示数据没有出错
   - OK 表示数据正确
-  - ACK 表示接收文件端发送了ACK
 - time: 接收当前帧的时间戳
 
 ### 具体设计

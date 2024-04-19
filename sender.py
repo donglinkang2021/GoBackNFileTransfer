@@ -45,10 +45,11 @@ class UDPSender:
         ack_no = self.recv_ack_no if ack_no is None else ack_no
         pdu = PDU(frame_no, ack_no, data, pdu_type)
         packed_data = pdu.pack()
-        if random.random() < ERROR_RATE / 100:
-            packed_data = packed_data[:5] + ERROR_DATA + packed_data[6:]
+        # if random.random() < ERROR_RATE / 100:
+        #     packed_data = packed_data[:5] + ERROR_DATA + packed_data[6:]
         if random.random() >= LOST_RATE / 100:
             self.sock.sendto(packed_data, self.receiver_addr)
+        # self.sock.sendto(packed_data, self.receiver_addr)
 
     def send_ack(self):
         pdu = PDU(self.send_ack_no, self.recv_no, b"", PacketType.ACK)
@@ -105,38 +106,29 @@ def receive(sender:UDPSender):
         except socket.timeout:
             continue
 
-def send_message(sender:UDPSender, message:str):
-    sender.send_pdu(PacketType.MESSAGE, message.encode())
+def send_packet(sender:UDPSender, data:bytes, pdu_type:PacketType=PacketType.MESSAGE):
+    sender.send_pdu(pdu_type, data)
     log_send(sender.send_no, sender.recv_ack_no, 
-             PacketType.MESSAGE, len(message), LogStatus.NEW)
+             pdu_type, len(data), LogStatus.NEW)
     sender.send_no = sender.loop_no(sender.send_no + 1)
     time.sleep(RT_TIMEOUT)
     while sender.send_no != sender.recv_ack_no:
         sender.send_no = sender.loop_no(sender.send_no - 1)
-        sender.send_pdu(PacketType.MESSAGE, message.encode())
+        sender.send_pdu(pdu_type, data)
         log_send(sender.send_no, sender.recv_ack_no, 
-                 PacketType.MESSAGE, len(message), LogStatus.TO)
+                 pdu_type, len(data), LogStatus.TO)
         sender.send_no = sender.loop_no(sender.send_no + 1)
         time.sleep(RT_TIMEOUT)
 
+def send_message(sender:UDPSender, message:str):
+    send_packet(sender, message.encode(), PacketType.MESSAGE)
 
-def send_file(sender:UDPSender, file_path:str):
+def send_file_gbn(sender:UDPSender, file_path:str):
     # send file name and size first
     file_name = os.path.basename(file_path)
     file_size = os.path.getsize(file_path)
     header = f"{file_name}{SEP}{file_size}".encode()
-    sender.send_pdu(PacketType.FILE, header)
-    log_send(sender.send_no, sender.recv_ack_no,
-            PacketType.FILE, len(header), LogStatus.NEW)
-    sender.send_no = sender.loop_no(sender.send_no + 1)
-    time.sleep(RT_TIMEOUT)
-    while sender.send_no != sender.recv_ack_no:
-        sender.send_no = sender.loop_no(sender.send_no - 1)
-        sender.send_pdu(PacketType.FILE, header)
-        log_send(sender.send_no, sender.recv_ack_no, 
-                 PacketType.FILE, len(header), LogStatus.TO)
-        sender.send_no = sender.loop_no(sender.send_no + 1)
-        time.sleep(RT_TIMEOUT)
+    send_packet(sender, header, PacketType.FILE)
     
     pbar = tqdm(total=file_size, unit="B", unit_scale=True)
     with open(file_path, "rb") as file:
@@ -156,7 +148,7 @@ def send_file(sender:UDPSender, file_path:str):
                     sender.send_window[rel_step]
                 )
                 log_send(sender.send_window[rel_step], sender.recv_ack_no,
-                         PacketType.FILE, end - start, LogStatus.TO)
+                         PacketType.FILE, end - start, LogStatus.RT)
             else:
                 sender.send_pdu(PacketType.FILE, data[start:end])
                 log_send(sender.send_no, sender.recv_ack_no,
@@ -171,26 +163,14 @@ def send_file(sender:UDPSender, file_path:str):
             sender.window_left = sender.window_right
             pbar.update(len(sender.send_window) * DATA_SIZE)
             sender.send_window.clear()
-        elif sender.recv_ack_no in sender.send_window:
+        else: 
             num_frame_sent = sender.send_window.index(sender.recv_ack_no)
             sender.window_left += num_frame_sent
+            # Go Back N
             sender.window_right = sender.window_left
             sender.send_window = sender.send_window[num_frame_sent:]
-            # sender.send_no = sender.loop_no(sender.send_no - num_frame_sent)
             pbar.update(num_frame_sent * DATA_SIZE)
-        else: # Go Back N
-            sender.send_no = sender.loop_no(sender.send_no - len(sender.send_window))
-            sender.window_right = sender.window_left
-            sender.send_window.clear()
-            while sender.window_right < min(sender.window_left + SW_SIZE, num_frames):
-                start = sender.window_right * DATA_SIZE
-                end = min(start + DATA_SIZE, n_data)
-                sender.send_pdu(PacketType.FILE, data[start:end])
-                log_send(sender.send_no, sender.recv_ack_no,
-                         PacketType.FILE, end - start, LogStatus.RT)
-                sender.send_no = sender.loop_no(sender.send_no + 1)
-                sender.window_right += 1
-            
+
     pbar.set_description("File sent")
     pbar.close()
     print("\r$ ", end="")
@@ -198,12 +178,39 @@ def send_file(sender:UDPSender, file_path:str):
     sender.window_right = 0
     sender.send_window.clear()
 
+def send_file_sw(sender:UDPSender, file_path:str):
+    # stop and wait
+    # send file name and size first
+    file_name = os.path.basename(file_path)
+    file_size = os.path.getsize(file_path)
+    header = f"{file_name}{SEP}{file_size}".encode()
+    send_packet(sender, header, PacketType.FILE)
+    
+    pbar = tqdm(total=file_size, unit="B", unit_scale=True)
+    with open(file_path, "rb") as file:
+        data = file.read()
+
+    n_data = len(data)
+    num_frames = (n_data + DATA_SIZE - 1) // DATA_SIZE
+    for num_frame in range(num_frames):
+        start = num_frame * DATA_SIZE
+        end = min(start + DATA_SIZE, n_data)
+        send_packet(sender, data[start:end], PacketType.FILE)
+        pbar.update(end - start)
+
+    pbar.set_description("File sent")
+    pbar.close()
+    print("\r$ ", end="")
+
 def main():
     init_logger("sender.log")
     sender = UDPSender(('192.168.10.129', UDP_PORT))
     print(f"Receiver address: {sender.receiver_addr} ")
-    recv_thread = threading.Thread(target=receive, args=(sender,))
-    recv_thread.daemon = True 
+    recv_thread = threading.Thread(
+        target=receive, 
+        args=(sender,), 
+        daemon = True
+    )
     recv_thread.start()
 
     while True:
@@ -215,22 +222,19 @@ def main():
         elif message.lower() == "sendfile" or message.lower() == "sf":
             file_path = input("<file_path>: ").strip()
             if os.path.exists(file_path):
-                file_thread = threading.Thread(
-                    target=send_file,
+                threading.Thread(
+                    target=send_file_gbn,
                     args=(sender, file_path),
                     daemon=True
-                )
-                file_thread.daemon = True
-                file_thread.start()
+                ).start()
             else:
                 print("File does not exist.")
         else:
-            msg_thread = threading.Thread(
+            threading.Thread(
                 target=send_message, 
-                args=(sender, message)
-            )
-            msg_thread.daemon = True
-            msg_thread.start()
+                args=(sender, message),
+                daemon=True
+            ).start()
 
     sender.running = False
     recv_thread.join()

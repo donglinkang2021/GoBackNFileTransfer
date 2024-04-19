@@ -32,6 +32,7 @@ class UDPReceiver:
         self.pbar = None
         self.file_path = None
         self.file_size = 0
+        self.file_data = bytes()
 
     def info(self):
         print(f"send_no: {self.send_no}")
@@ -53,10 +54,14 @@ class UDPReceiver:
     def finish_file_transfer(self):
         self.pbar.set_description(f"File received")
         self.pbar.close()
+        with open(self.file_path, "wb") as file:
+            file.write(self.file_data)
         print(f"\r<file_path>: {self.file_path} \n$ ", end="")
         self.pbar = None
         self.file_path = None
         self.file_transfer = False
+        self.file_size = 0
+        self.file_data = bytes()
 
     def loop_no(self, step:int):
         return (step - INIT_SEQ_NO) % MAX_SEQ_LEN + INIT_SEQ_NO
@@ -79,8 +84,7 @@ def receive_file(receiver:UDPReceiver, pdu:PDU):
         file_header = pdu.data.decode().split(SEP)
         receiver.init_file_transfer(file_header[0], int(file_header[1]))
     else:
-        with open(receiver.file_path, "ab") as file:
-            file.write(pdu.data)
+        receiver.file_data += pdu.data
         receiver.pbar.update(pdu.data_size)
         receiver.file_size -= pdu.data_size
         if receiver.file_size == 0:
@@ -160,8 +164,11 @@ def send_message(receiver:UDPReceiver, message:str):
 def main():
     init_logger("receiver.log")
     receiver = UDPReceiver(('192.168.10.129', UDP_PORT))
-    recv_thread = threading.Thread(target=receive, args=(receiver,))
-    recv_thread.daemon = True
+    recv_thread = threading.Thread(
+        target=receive, 
+        args=(receiver,),
+        daemon=True
+    )
     recv_thread.start()
 
     while True:
