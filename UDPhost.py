@@ -269,7 +269,8 @@ def send_file_sw(sender:UDPSender, file_path:str):
     print("\r$ ", end="")
 
 def main():
-    sender = UDPSender((WINDOW_IP, UDP_PORT), (LINUX_IP, UDP_PORT))
+    bind_ip, bind_port = input("Bind address: <ip:port>: ").strip().split(":")
+    sender = UDPSender((bind_ip, int(bind_port)))
     init_logger(f"{sender.log_dir}/communication.log")
     recv_thread = threading.Thread(
         target=receive, 
@@ -284,7 +285,16 @@ def main():
             break
         elif message.lower() == "info":
             sender.info()
+        elif message.lower() == "target":
+            addr = input("<ip:port>: ").strip().split(":")
+            target_addr = (addr[0], int(addr[1]))
+            if target_addr not in sender.target_addrs:
+                sender.target_addrs.add(target_addr)
+            sender.target_addr = target_addr
         elif message.lower() == "sendfile" or message.lower() == "sf":
+            if sender.target_addr is None:
+                print("\rTarget address required. Use `target` command. ")
+                continue
             file_path = input("<file_path>: ").strip()
             if os.path.exists(file_path):
                 threading.Thread(
@@ -293,16 +303,16 @@ def main():
                     daemon=True
                 ).start()
             else:
-                print("\rFile not found. \n$ ", end="")
+                print("\rFile not found. ")
         else:
-            if sender.target_addr is not None:
-                threading.Thread(
-                    target=send_message, 
-                    args=(sender, message),
-                    daemon=True
-                ).start()
-            else:
-                print("\rNo target address. \n$ ", end="")
+            if sender.target_addr is None:
+                print("\rTarget address required. Use `target` command. ")
+                continue
+            threading.Thread(
+                target=send_message, 
+                args=(sender, message),
+                daemon=True
+            ).start()
 
     sender.running = False
     recv_thread.join()
@@ -311,41 +321,7 @@ def main():
 if __name__ == "__main__":
     main()
 
-
-"""
-SWS 6:
-<file_path>: file_examples\miziha_running.png        
-Sending miziha_running.png (3324832 bytes) ... 
-File sent: : 3.32MB [06:49, 8.12kB/s]
-
-SWS 50:
-<file_path>: file_examples\miziha_running.png
-Sending miziha_running.png (3324832 bytes) ...
-File sent: : 3.32MB [01:08, 48.8kB/s]
-
-SWS 99:
-<file_path>: file_examples\miziha_running.png
-Sending miziha_running.png (3324832 bytes) ...
-File sent: : 3.32MB [00:36, 92.1kB/s]
-
-
-pdu lost 10%:
-$ sf
-<file_path>: file_examples\miziha_running.png
-File sent: : 3.32MB [07:28, 7.42kB/s]
-
-pdu err 10%:
-$ sf
-<file_path>: file_examples\miziha_running.png
-File sent: : 3.32MB [07:29, 7.40kB/s]
-
-pdu lost 10% and err 10%:
-$ sf
-<file_path>: file_examples\1_chpt1_Introduction-2024.pdf
-File sent: : 4.91MB [21:08, 3.87kB/s]
-
-pdu lost 10% and err 10%:
-$ sf
-<file_path>: file_examples\miziha_running.png
-File sent: : 3.32MB [03:49, 14.5kB/s]
-"""
+# my window addr 
+# 192.168.10.1:42477
+# my linux addr
+# 192.168.10.129:42477

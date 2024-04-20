@@ -15,10 +15,6 @@ INIT_SEQ_NO = config['INIT_SEQ_NO'] # 起始PDU的序号
 TIMEOUT = config['TIMEOUT']         # 超时定时器值，单位为毫秒
 
 # for socket
-WINDOW_IP = "192.168.10.1"
-WINDOW_PORT = 42477
-LINUX_IP = "192.168.10.129"
-LINUX_PORT = 42477
 MAX_SEQ_LEN = MAX_SEQ_NO - INIT_SEQ_NO + 1
 SK_TIMEOUT = 1.0                 # socket 接收信息超时时间，单位为秒
 BUF_SIZE = 2048                  # 缓冲区大小
