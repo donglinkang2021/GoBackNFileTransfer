@@ -5,15 +5,16 @@ from pdu import PDU, PacketType
 from config import *
 from logger import log_send, log_recv, LogStatus
 from tqdm import tqdm
-from utils import addr_to_str
 import time
 import random
+from utils import addr_to_str
 
 random.seed(1337)
 
 class UDPConnection:
-    def __init__(self, bind_addr:Tuple[str, int]=None, target_addr:Tuple[str, int]=None):
-        assert bind_addr is not None, "Bind address is required."
+    def __init__(self, sock:socket.socket, target_addr:Tuple[str, int], log_dir:str="logs"):
+        assert sock is not None, "Socket is required."
+        self.sock = sock
         # as sender
         self.send_no = INIT_SEQ_NO      # pdu_to_send: sender's send no
         self.recv_ack_no = INIT_SEQ_NO  # acked_no: sender's expected no
@@ -22,16 +23,11 @@ class UDPConnection:
         self.recv_no = INIT_SEQ_NO      # pdu_exp: receiver's expected no
         self.send_ack_no = INIT_SEQ_NO  # pdu_recv: receiver's send ack no
 
-        self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        self.sock.bind(bind_addr)
         self.running = True
-        
         self.target_addr = target_addr
-
-        # for logging
-        self.log_dir = addr_to_str(bind_addr)
-        if not os.path.exists(self.log_dir):
-            os.makedirs(self.log_dir)
+        self.target_dir = f"{log_dir}/{addr_to_str(target_addr)}"
+        if not os.path.exists(self.target_dir):
+            os.makedirs(self.target_dir)
 
         # send file
         self.send_window = []  # list of send_no of PDUs to send
@@ -39,12 +35,15 @@ class UDPConnection:
         self.window_right = 0
 
         # recv file
-        self.recv_dir = f"{self.log_dir}/received"
+        self.recv_dir = f"{self.target_dir}/received"
         self.file_transfer = False
         self.pbar = None
         self.file_path = None
         self.file_size = 0
         self.file_data = bytes()
+
+    def __str__(self) -> str:
+        return f"UDPConnection: {self.target_addr}"
 
     def info(self):
         print(f"target_addr: {self.target_addr}")
@@ -149,8 +148,7 @@ def receive(connection:UDPConnection):
             connection.sock.settimeout(SK_TIMEOUT)
             pdu, addr = connection.recv_pdu()
             if connection.target_addr != addr:
-                print(f"\rTarget address added: {addr} \n$ ", end="")
-                connection.target_addr = addr
+                continue
             if pdu == None:
                 log_recv(connection.send_ack_no, connection.recv_no, 
                     PacketType.UNKNOWN, 0, LogStatus.DAE)
