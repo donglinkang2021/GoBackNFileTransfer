@@ -11,8 +11,8 @@ def get_local_ip():
     
     try:
         # 连接到一个外部地址
-        sock.connect(("8.8.8.8", 80))  # 使用谷歌的 DNS 服务器地址作为连接目标
-        local_ip = sock.getsockname()[0]
+        sock.connect(("192.168.10.129", 80))
+        local_ip = sock.getsockname()
     except socket.error:
         local_ip = "未知"
     finally:

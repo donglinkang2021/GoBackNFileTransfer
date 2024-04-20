@@ -1,0 +1,11 @@
+{
+    "UDP_PORT": 42477,
+    "DATA_SIZE": 1024,
+    "ERROR_RATE": 5,
+    "LOST_RATE": 5,
+    "SW_SIZE": 90,
+    "MAX_SEQ_NO": 100,
+    "INIT_SEQ_NO": 1,
+    "TIMEOUT": 500
+}
+  
