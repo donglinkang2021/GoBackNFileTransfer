@@ -116,7 +116,11 @@ PDU。
 # 发送端
 send_no = 1
 recv_ack_no = 1
-pdu = PDU(frame_no = send_no, ack_no = recv_ack_no, data)
+pdu = PDU(
+  frame_no = send_no, 
+  ack_no = recv_ack_no, 
+  data
+)
 send_pdu(pdu)
 send_no += 1
 
